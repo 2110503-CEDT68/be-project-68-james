@@ -84,7 +84,7 @@ exports.addReservation = async (req, res, next) => {
         if (!coworking) {
             return res.status(404).json({
               success:false,
-              message: `No Coworking with the id of ${req.params.hospitalId}`
+              message: `No Coworking with the id of ${req.params.coworkingId}`
             });
         }
 
