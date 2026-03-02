@@ -6,29 +6,37 @@ const Coworking = require('../models/Coworking');
 //@route   GET /api/v1/reservations
 //@access  Private
 exports.getReservations = async (req, res, next) => {
-  let query;
+  try {
+    let filter = {};
 
-  if (req.user.role !== "admin") { 
-    // Requirement #4: General users can view their reservations
-    query = Reservation.find({ user: req.user.id }).populate({
+    // ถ้าเป็น user ธรรมดา → ดูได้เฉพาะของตัวเอง
+    if (req.user.role !== "admin") {
+      filter.user = req.user.id;
+    }
+
+    // Filter by date (แบบทั้งวัน)
+    if (req.query.date) {
+      const selectedDate = new Date(req.query.date);
+      const nextDate = new Date(req.query.date);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      filter.date = {
+        $gte: selectedDate,
+        $lt: nextDate
+      };
+    }
+
+    const reservations = await Reservation.find(filter).populate({
       path: 'coworking',
       select: 'name address telephone openTime closeTime'
     });
-  } else { 
-    // Requirement #7: Admin can view any reservations
-      query = Reservation.find().populate({
-        path:'coworking',
-        select : 'name address telephone openTime closeTime'
-      });
-    }
 
-  try {
-    const reservations = await query;
     res.status(200).json({
       success: true,
       count: reservations.length,
       data: reservations
     });
+
   } catch (error) {
     console.log(error);
     return res.status(500).json({
@@ -36,7 +44,7 @@ exports.getReservations = async (req, res, next) => {
       message: "Cannot find Reservation"
     });
   }
-}; 
+};
 
 //@desc    Get single reservation
 //@route   GET /api/v1/reservations/:id
@@ -191,6 +199,62 @@ exports.deleteReservation = async (req, res, next) => {
     return res.status(500).json({
       success: false,
       message: "Cannot delete Reservation"
+    });
+  }
+};
+exports.checkAvailability = async (req, res, next) => {
+  try {
+    const { date } = req.body;
+
+    const coworking = await Coworking.findById(req.params.coworkingId);
+
+    if (!coworking) {
+      console.log("Coworking not found");
+      return res.status(404).json({
+        success: false,
+        message: "Coworking not found"
+      });
+    }
+
+    const bookingTime = new Date(date);
+    const hour = bookingTime.getHours();
+
+    const openHour = parseInt(coworking.openTime.split(":")[0]);
+    const closeHour = parseInt(coworking.closeTime.split(":")[0]);
+
+    if (!(hour >= openHour && hour < closeHour)) {
+      return res.status(400).json({
+        success: false,
+        reason: "Coworking is closed at this time"
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Slot is available"
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+};
+exports.deleteAllReservations = async (req, res, next) => {
+  try {
+
+    const result = await Reservation.deleteMany({});
+
+    res.status(200).json({
+      success: true,
+      deletedCount: result.deletedCount,
+      message: "All reservations have been deleted"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete reservations"
     });
   }
 };
