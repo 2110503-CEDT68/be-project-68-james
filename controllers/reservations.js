@@ -8,13 +8,10 @@ const Coworking = require('../models/Coworking');
 exports.getReservations = async (req, res, next) => {
   try {
     let filter = {};
-
-    // ถ้าเป็น user ธรรมดา → ดูได้เฉพาะของตัวเอง
     if (req.user.role !== "admin") {
       filter.user = req.user.id;
     }
-
-    // Filter by date (แบบทั้งวัน)
+    
     if (req.query.date) {
       const selectedDate = new Date(req.query.date);
       const nextDate = new Date(req.query.date);
@@ -209,7 +206,6 @@ exports.checkAvailability = async (req, res, next) => {
     const coworking = await Coworking.findById(req.params.coworkingId);
 
     if (!coworking) {
-      console.log("Coworking not found");
       return res.status(404).json({
         success: false,
         message: "Coworking not found"
