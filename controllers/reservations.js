@@ -48,6 +48,7 @@ exports.getReservations = async (req, res, next) => {
 //@desc    Get single reservation
 //@route   GET /api/v1/reservations/:id
 //@access  Private
+
 exports.getReservation = async (req, res, next) => {
   try {
     const reservation = await Reservation.findById(req.params.id).populate({
